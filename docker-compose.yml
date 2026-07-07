@@ -1,0 +1,43 @@
+version: "3.8"
+
+networks:
+  searxng-net:
+    driver: bridge
+
+services:
+
+  searxng:
+    image: docker.io/searxng/searxng:2026.6.17-4dfdc822c
+    environment:
+      SEARXNG_SECRET: ${SEARXNG_SECRET:-7d9f3e8e7d1a0e2e1f8d9a4c5b6e7f8a9d0c1b2e3f4a5b6c}
+      SEARXNG_VALKEY_URL: redis://searxng-valkey:6379/0
+      SEARXNG_LIMITER: "false"
+    volumes:
+      - ./searxng:/etc/searxng
+      - ./data/searxng-cache:/var/cache/searxng
+    ports:
+      - "38080:8080"
+    networks:
+      - searxng-net
+    depends_on:
+      - searxng-valkey
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+
+  searxng-valkey:
+    image: docker.io/valkey/valkey:9.1.0
+    command:
+      - valkey-server
+      - --save
+      - "60"
+      - "1"
+    volumes:
+      - ./data/searxng-valkey:/data
+    networks:
+      - searxng-net
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
